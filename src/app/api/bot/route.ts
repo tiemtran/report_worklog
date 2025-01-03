@@ -55,7 +55,19 @@ bot.on('message:text', async (ctx) => {
   const user = ctx.message.from;
 
   // Kiểm tra và lấy username hoặc tên đầy đủ
-  const username = (user.username ?? 'demo') as keyof typeof User;
+  if (!user) {
+      await ctx.reply('Không thể xác định người dùng.');
+      return;
+    }
+
+    const username = user.username ?? 'demo';
+    const userKey = username as keyof typeof User;
+
+    if (!User[userKey]) {
+      await ctx.reply(`Không tìm thấy thông tin cho người dùng: ${username}`);
+      return;
+    }
+  
   const timestamp = ctx.message.date; // Unix timestamp (giây)
 
   // Chuyển Unix timestamp sang đối tượng Date
@@ -64,6 +76,10 @@ bot.on('message:text', async (ctx) => {
   // Định dạng ngày theo kiểu YYYY-MM-DD
   const formattedDate = messageDate.toISOString().split('T')[0]; // Lấy phần ngày trước 'T'
   const data = await exportWorklogsToSheet(User[username], 0, formattedDate)
+  if (!data) {
+  await ctx.reply('Không có dữ liệu để báo cáo.');
+  return;
+}
   const result =  generateTelegramMessage(data ?? [])
   if (text === 'Chào bạn 👋') {
     await ctx.reply(`Xin chào ${User[username]} ! 😊`);
