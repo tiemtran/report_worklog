@@ -1,9 +1,9 @@
 export const dynamic = "force-dynamic";
 
-// export const fetchCache = "force-no-store";
+export const fetchCache = "force-no-store";
 
 import { User } from "@/consts";
-import { exportWorklogsToSheet, generateTelegramMessage } from "@/services";
+import { exportWorklogsToSheet, generateTelegramMessage, validateDateFormat } from "@/services";
 import { Bot, webhookCallback, Keyboard } from "grammy";
 // import { Menu } from '@grammyjs/menu';
 
@@ -75,13 +75,13 @@ bot.on("message:text", async (ctx) => {
   const messageDate = new Date(timestamp * 1000); // Nhân với 1000 để chuyển sang ms
 
   // Định dạng ngày theo kiểu YYYY-MM-DD
-  const formattedDate = messageDate.toISOString().split("T")[0]; // Lấy phần ngày trước 'T'
+  const formattedDate = validateDateFormat(text) || messageDate.toISOString().split("T")[0]; // Lấy phần ngày trước 'T'
   const data = await exportWorklogsToSheet(User[userKey], 0, formattedDate);
   if (!data) {
     await ctx.reply("Không có dữ liệu để báo cáo.");
     return;
   }
-  const result = generateTelegramMessage(data ?? []);
+  const result = generateTelegramMessage(data ?? [], formattedDate);
   if (text === "Chào bạn 👋") {
     await ctx.reply(`Xin chào ${User[userKey]} ! 😊`);
     await ctx.reply(result);
@@ -92,6 +92,7 @@ bot.on("message:text", async (ctx) => {
     await ctx.reply(result);
   } else {
     await ctx.reply("Bạn vừa gửi: " + text);
+    await ctx.reply(result);
   }
 });
 

@@ -185,7 +185,10 @@ function initializeDateColumns(dateRange: any) {
   );
 }
 
-export function generateTelegramMessage(data: any[]) {
+export function generateTelegramMessage(data: any[], formattedDate: string) {
+  if (!data || data.length === 0) {
+    return `Không có dữ liệu để hiển thị ngày ${formattedDate}`;
+  }
   // Tìm tất cả các ngày có trong dữ liệu
   const allDates = Object.keys(data[0]).filter((key) =>
     /^\d{4}-\d{2}-\d{2}$/.test(key)
@@ -223,6 +226,11 @@ export function generateTelegramMessage(data: any[]) {
   message += "💪 *Mọi thứ đang đi đúng tiến độ, hãy tiếp tục duy trì nhé!*";
 
   return message;
+}
+
+export function validateDateFormat(message: string): string {
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  return dateRegex.test(message) ? message : '';
 }
 
 // function exportToSheet(allWorklogs, dateRange, sheetName) {
