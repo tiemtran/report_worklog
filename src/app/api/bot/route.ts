@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 
-export const fetchCache = "force-no-store";
+// export const fetchCache = "force-no-store";
 
 import { User } from "@/consts";
 import { exportWorklogsToSheet, generateTelegramMessage } from "@/services";
