@@ -6,5 +6,6 @@ export const User = {
     markpsyngo: "quangnb",
     AWING_Tuan20P: "tuanp",
     kienvanglangthang: "dunghv",
+    kngx01: "khanhnd",
     demo: ""
 }
