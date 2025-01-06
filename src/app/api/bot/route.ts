@@ -10,7 +10,7 @@ import {
 } from "@/services";
 import { saveToTurso } from "@/services/db";
 import { checkAndSaveToRedis } from "@/services/redis";
-import { Bot, webhookCallback, Keyboard } from "grammy";
+import { Bot, webhookCallback } from "grammy";
 // import { Menu } from '@grammyjs/menu';
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
