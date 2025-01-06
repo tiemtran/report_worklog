@@ -55,8 +55,7 @@ export async function exportWorklogsToSheet(
       dateRange,
       jiraUrl ?? ""
     );
-    return allWorklogs.filter((issue) => issue[filterDate] !== "");
-    // exportToSheet(allWorklogs, dateRange, sheetName);
+    return filterDataByDate(allWorklogs, filterDate);
   } catch (error) {
     console.log("Lỗi khi lấy dữ liệu từ Jira: " + error);
   }
@@ -231,6 +230,16 @@ export function generateTelegramMessage(data: any[], formattedDate: string) {
 export function validateDateFormat(message: string): string {
   const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
   return dateRegex.test(message) ? message : '';
+}
+
+function filterDataByDate(data: any[], date: string) {
+  return data
+    .filter(item => item[date]) // Lọc các mục có giá trị không rỗng tại ngày cụ thể
+    .map(item => ({
+      IssueKey: item.IssueKey,
+      Summary: item.Summary,
+      [date]: item[date]
+    }));
 }
 
 // function exportToSheet(allWorklogs, dateRange, sheetName) {
