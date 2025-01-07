@@ -243,6 +243,7 @@ function filterDataByDate(data: any[], date: string) {
 }
 
 const escapeMarkdownV2 = (text: string) => {
+  // Escape tất cả ký tự đặc biệt cho MarkdownV2
   return text.replace(/[_*[\]()~`>#+\-=|{}.!]/g, "\\$&");
 };
 
@@ -263,33 +264,43 @@ export const formatMessage = (data: any[]) => {
 
   allDates.sort().forEach((date) => {
     const tasksForDate = data.filter((item) => item[date]);
-    const escapedDate = date.replace(/[-]/g, "\\-");
+    // Escape date string
+    const escapedDate = date.replace(/-/g, "\\-");
     message += `📅 *${escapedDate}*\n\n`;
 
     let dailyTotal = 0;
     tasksForDate.forEach((item) => {
       const hours = parseFloat(item[date]);
-      dailyTotal += hours;
+      if (!isNaN(hours)) {
+        dailyTotal += hours;
 
-      message += `🔹 [${escapeMarkdownV2(item.IssueKey)}](${
-        item?.Link ?? ""
-      }) \\- ${escapeMarkdownV2(item.Summary)}\n`;
-      message += `   ⏱ ${hours} giờ\n\n`;
+        const issueKey = escapeMarkdownV2(item.IssueKey ?? "N/A");
+        const link = item.Link ? escapeMarkdownV2(item.Link) : "";
+        const summary = escapeMarkdownV2(item.Summary ?? "Không có mô tả");
+
+        if (link) {
+          message += `🔹 [${issueKey}](${link}) \\- ${summary}\n`;
+        } else {
+          message += `🔹 ${issueKey} \\- ${summary}\n`;
+        }
+        message += `   ⏱ ${hours.toFixed(1).replace('.', '\\.')} giờ\n\n`;
+      }
     });
 
-    message += `📌 *Tổng trong ngày: ${dailyTotal} giờ*\n\n`;
+    message += `📌 *Tổng trong ngày: ${dailyTotal.toFixed(1).replace('.', '\\.')} giờ*\n\n`;
   });
 
   const grandTotal = allDates.reduce((total, date) => {
     return (
       total +
       data.reduce((sum, item) => {
-        return sum + (item[date] ? parseFloat(item[date]) : 0);
+        const hours = item[date] ? parseFloat(item[date]) : 0;
+        return sum + (isNaN(hours) ? 0 : hours);
       }, 0)
     );
   }, 0);
 
-  message += `\n💪 *Tổng thời gian: ${grandTotal} giờ*`;
+  message += `💪 *Tổng thời gian: ${grandTotal.toFixed(1).replace('.', '\\.')} giờ*`;
   return message;
 };
 
