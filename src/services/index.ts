@@ -275,7 +275,9 @@ export const formatMessage = (data: any[]) => {
         dailyTotal += hours;
 
         const issueKey = escapeMarkdownV2(item.IssueKey ?? "N/A");
-        const link = item.Link ? escapeMarkdownV2(item.Link) : "";
+        // const link = issueKey ? escapeMarkdownV2(`https://im.awing.vn/browse/${issueKey}`) : "";
+        const baseUrl = "https://im\\.awing\\.vn/browse/";
+        const link = `${baseUrl}${issueKey}`;
         const summary = escapeMarkdownV2(item.Summary ?? "Không có mô tả");
 
         if (link) {
