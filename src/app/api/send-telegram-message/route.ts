@@ -1,9 +1,12 @@
-import { NextResponse } from "next/server";
-import { Bot } from "grammy";
-import { getAllUsersFromTurso } from "@/services/db";
-import { exportWorklogsToSheet, generateTelegramMessage } from "@/services";
 import { User } from "@/consts";
+import {
+  exportWorklogsToSheet,
+  formatMessage
+} from "@/services";
+import { getAllUsersFromTurso } from "@/services/db";
+import { Bot } from "grammy";
 import moment from "moment";
+import { NextResponse } from "next/server";
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 
@@ -27,12 +30,12 @@ export async function GET() {
             moment().format("YYYY-MM-DD")
           );
           if (data) {
-            const result = generateTelegramMessage(
-              data ?? [],
-              moment().format("YYYY-MM-DD")
-            );
+            const result = formatMessage(data ?? []);
+
             await bot.api.sendMessage(Number(user.id), message);
-            await bot.api.sendMessage(Number(user.id), result);
+            await bot.api.sendMessage(Number(user.id), result, {
+              parse_mode: "MarkdownV2",
+            });
           }
         }
       });

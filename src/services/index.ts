@@ -229,18 +229,69 @@ export function generateTelegramMessage(data: any[], formattedDate: string) {
 
 export function validateDateFormat(message: string): string {
   const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-  return dateRegex.test(message) ? message : '';
+  return dateRegex.test(message) ? message : "";
 }
 
 function filterDataByDate(data: any[], date: string) {
   return data
-    .filter(item => item[date]) // Lọc các mục có giá trị không rỗng tại ngày cụ thể
-    .map(item => ({
+    .filter((item) => item[date]) // Lọc các mục có giá trị không rỗng tại ngày cụ thể
+    .map((item) => ({
       IssueKey: item.IssueKey,
       Summary: item.Summary,
-      [date]: item[date]
+      [date]: item[date],
     }));
 }
+
+const escapeMarkdownV2 = (text: string) => {
+  return text.replace(/[_*[\]()~`>#+\-=|{}.!]/g, "\\$&");
+};
+
+export const formatMessage = (data: any[]) => {
+  if (!data || data.length === 0) {
+    return `Không có dữ liệu để hiển thị`;
+  }
+
+  const allDates = Array.from(
+    new Set(
+      data.flatMap((item) =>
+        Object.keys(item).filter((key) => /^\d{4}-\d{2}-\d{2}$/.test(key))
+      )
+    )
+  );
+
+  let message = `📊 *Báo Cáo Công Việc*\n\n`;
+
+  allDates.sort().forEach((date) => {
+    const tasksForDate = data.filter((item) => item[date]);
+    const escapedDate = date.replace(/[-]/g, "\\-");
+    message += `📅 *${escapedDate}*\n\n`;
+
+    let dailyTotal = 0;
+    tasksForDate.forEach((item) => {
+      const hours = parseFloat(item[date]);
+      dailyTotal += hours;
+
+      message += `🔹 [${escapeMarkdownV2(item.IssueKey)}](${
+        item?.Link ?? ""
+      }) \\- ${escapeMarkdownV2(item.Summary)}\n`;
+      message += `   ⏱ ${hours} giờ\n\n`;
+    });
+
+    message += `📌 *Tổng trong ngày: ${dailyTotal} giờ*\n\n`;
+  });
+
+  const grandTotal = allDates.reduce((total, date) => {
+    return (
+      total +
+      data.reduce((sum, item) => {
+        return sum + (item[date] ? parseFloat(item[date]) : 0);
+      }, 0)
+    );
+  }, 0);
+
+  message += `\n💪 *Tổng thời gian: ${grandTotal} giờ*`;
+  return message;
+};
 
 // function exportToSheet(allWorklogs, dateRange, sheetName) {
 //   const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
