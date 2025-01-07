@@ -22,7 +22,7 @@ export async function GET() {
     const message = "**Đây là tin nhắn tự động được gửi lúc 18h30**";
 
     if (users?.length) {
-      users.forEach(async (user) => {
+      for (const user of users) {
         if (user.id) {
           const data = await exportWorklogsToSheet(
             User[user.username as keyof typeof User],
@@ -31,14 +31,14 @@ export async function GET() {
           );
           if (data) {
             const result = formatMessage(data ?? []);
-
+      
             await bot.api.sendMessage(Number(user.id), message);
             await bot.api.sendMessage(Number(user.id), result, {
               parse_mode: "MarkdownV2",
             });
           }
         }
-      });
+      }
     }
 
     return NextResponse.json({
