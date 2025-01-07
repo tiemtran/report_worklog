@@ -55,8 +55,8 @@ bot.use(
 // 1. Commands với mô tả
 bot.api.setMyCommands([
   { command: "start", description: "Đăng kí thông tin" },
-  { command: "report", description: "Xem Logwork ngày hiện tại" },
-  { command: "viewlogwork", description: "Xem Logwork" },
+  { command: "dailyreport", description: "Xem Logwork ngày hiện tại" },
+  { command: "report", description: "Xem Logwork option" },
   { command: "help", description: "Xem hướng dẫn" },
   { command: "menu", description: "Các tiện ích khác" },
 ]);
@@ -93,7 +93,7 @@ bot.command("start", async (ctx) => {
   }
 });
 
-bot.command("report", async (ctx) => {
+bot.command("dailyreport", async (ctx) => {
   const username = ctx.from?.username;
   // Kiểm tra và lấy username hoặc tên đầy đủ
   if (!username) {
@@ -110,18 +110,17 @@ bot.command("report", async (ctx) => {
     return;
   }
 
-  const data = await exportWorklogsToSheet(
-    userJira,
-    0,
-    moment().format("YYYY-MM-DD")
-  );
+  const data = await exportWorklogsToSheet({
+    assignee: userJira,
+    filterDate: moment().format("YYYY-MM-DD"),
+  });
 
   if (!data) {
     await ctx.reply("Không có dữ liệu để báo cáo.");
     return;
   }
 
-  const result = formatMessage(data ?? []);
+  const result = formatMessage(data ?? [], userJira);
   await ctx.reply(result, {
     parse_mode: "MarkdownV2",
   });
@@ -143,6 +142,38 @@ bot.command("menu", async (ctx) => {
   });
 });
 
+bot.command("test", async (ctx) => {
+  const messageText = ctx.message?.text || "";
+  const args = messageText.split(" ").slice(1); // Tách phần sau "/test"
+
+  // Kiểm tra nếu không có đủ tham số hoặc tham số không hợp lệ
+  if (args.length === 0 || args.length > 1) {
+    await ctx.reply("Vui lòng nhập đúng định dạng: /test <usernameJira>");
+    return;
+  }
+
+  const commandArg = args[0].toLowerCase();
+  const isCheckUser = Object.values(User).includes(commandArg);
+  if (!isCheckUser) {
+    await ctx.reply(`User không hợp lệ: ${commandArg}`);
+    return;
+  }
+  const data = await exportWorklogsToSheet({
+    assignee: commandArg,
+    filterDate: moment().format("YYYY-MM-DD"),
+  });
+
+  if (!data) {
+    await ctx.reply("Không có dữ liệu để báo cáo.");
+    return;
+  }
+
+  const result = formatMessage(data ?? [], commandArg);
+  await ctx.reply(result, {
+    parse_mode: "MarkdownV2",
+  });
+});
+
 bot.command("help", async (ctx) => {
   // Trong MarkdownV2, các ký tự đặc biệt cần được escape:
   // _ * [ ] ( ) ~ ` > # + - = | { } . !
@@ -150,9 +181,11 @@ bot.command("help", async (ctx) => {
 *Hướng dẫn sử dụng bot*
 
 *1\\. Các lệnh cơ bản:*
-• /start \\- Khởi động bot
+• /start \\- Đăng kí thông tin
+• /dailyreport \\- Xem Logwork ngày hôm nay
+• /report \\- Xem Logwork với các option
 • /menu \\- Xem menu chính
-• /book \\- Đặt lịch hẹn
+• /book \\- Đặt lịch hẹn (Comming soon...)
 • /help \\- Xem hướng dẫn này
 
 *2\\. Cách sử dụng:*
@@ -181,8 +214,10 @@ bot.hears("❌ Đóng menu", async (ctx) => {
 });
 
 // 3. Inline Keyboard (nút bên dưới tin nhắn)
-bot.command("viewlogwork", async (ctx) => {
+bot.command("report", async (ctx) => {
   const inlineKeyboard = new InlineKeyboard()
+    .row()
+    .text("Ngày hôm nay", "today_report")
     .row()
     .text("Ngày hôm qua", "yesterday_report")
     .row()
@@ -198,25 +233,153 @@ bot.command("viewlogwork", async (ctx) => {
 });
 
 // Xử lý callback khi người dùng nhấn nút inline
+
+bot.callbackQuery("today_report", async (ctx) => {
+  await ctx.answerCallbackQuery({
+    text: "Đã xác nhận chọn ngày hôm nay!",
+  });
+
+  const username = ctx.from?.username;
+  // Kiểm tra và lấy username hoặc tên đầy đủ
+  if (!username) {
+    await ctx.reply("Không thể xác định người dùng.");
+    return;
+  }
+
+  const userKey = username as keyof typeof User;
+
+  const userJira = User[userKey];
+
+  if (!userJira) {
+    await ctx.reply(`Thông tin người dùng: ${username} chưa được khai báo`);
+    return;
+  }
+
+  const data = await exportWorklogsToSheet({
+    assignee: userJira,
+  });
+
+  if (!data) {
+    await ctx.reply("Không có dữ liệu để báo cáo.");
+    return;
+  }
+
+  const result = formatMessage(data ?? [], userJira);
+  await ctx.reply(result, {
+    parse_mode: "MarkdownV2",
+  });
+});
+
 bot.callbackQuery("yesterday_report", async (ctx) => {
   await ctx.answerCallbackQuery({
     text: "Đã xác nhận chọn ngày hôm qua!",
   });
-  await ctx.reply("Báo cáo ngày hôm qua!");
+
+  const username = ctx.from?.username;
+  // Kiểm tra và lấy username hoặc tên đầy đủ
+  if (!username) {
+    await ctx.reply("Không thể xác định người dùng.");
+    return;
+  }
+
+  const userKey = username as keyof typeof User;
+
+  const userJira = User[userKey];
+
+  if (!userJira) {
+    await ctx.reply(`Thông tin người dùng: ${username} chưa được khai báo`);
+    return;
+  }
+
+  const data = await exportWorklogsToSheet({
+    assignee: userJira,
+    isToday: false,
+    isYesterday: true,
+  });
+
+  if (!data) {
+    await ctx.reply("Không có dữ liệu để báo cáo.");
+    return;
+  }
+
+  const result = formatMessage(data ?? [], userJira);
+  await ctx.reply(result, {
+    parse_mode: "MarkdownV2",
+  });
 });
 
 bot.callbackQuery("current_week_report", async (ctx) => {
   await ctx.answerCallbackQuery({
     text: "Đã xác nhận chọn tuần hiện tại!",
   });
-  await ctx.reply("Báo cáo tuần hiện tại!");
+  const username = ctx.from?.username;
+  // Kiểm tra và lấy username hoặc tên đầy đủ
+  if (!username) {
+    await ctx.reply("Không thể xác định người dùng.");
+    return;
+  }
+
+  const userKey = username as keyof typeof User;
+
+  const userJira = User[userKey];
+
+  if (!userJira) {
+    await ctx.reply(`Thông tin người dùng: ${username} chưa được khai báo`);
+    return;
+  }
+
+  const data = await exportWorklogsToSheet({
+    assignee: userJira,
+    isToday: false,
+    isCurrentWeek: true,
+  });
+
+  if (!data) {
+    await ctx.reply("Không có dữ liệu để báo cáo.");
+    return;
+  }
+
+  const result = formatMessage(data ?? [], userJira);
+  await ctx.reply(result, {
+    parse_mode: "MarkdownV2",
+  });
 });
 
 bot.callbackQuery("current_month_report", async (ctx) => {
   await ctx.answerCallbackQuery({
     text: "Đã xác nhận chọn tháng hiện tại!",
   });
-  await ctx.reply("Báo cáo tháng hiện tại!");
+  const username = ctx.from?.username;
+  // Kiểm tra và lấy username hoặc tên đầy đủ
+  if (!username) {
+    await ctx.reply("Không thể xác định người dùng.");
+    return;
+  }
+
+  const userKey = username as keyof typeof User;
+
+  const userJira = User[userKey];
+
+  if (!userJira) {
+    await ctx.reply(`Thông tin người dùng: ${username} chưa được khai báo`);
+    return;
+  }
+
+  const data = await exportWorklogsToSheet({
+    assignee: userJira,
+    isToday: false,
+    isCurrentMonth: true,
+  });
+
+  if (!data) {
+    await ctx.reply("Không có dữ liệu để báo cáo.");
+    return;
+  }
+
+  const result = formatMessage(data ?? [], userJira);
+  await ctx.reply(result, {
+    parse_mode: "MarkdownV2",
+  });
 });
 
 // Xử lý khi người dùng nhấn nút "Nhập ngày cụ thể"
@@ -241,8 +404,40 @@ bot.on("message:text", async (ctx) => {
       if (!isNaN(date.getTime())) {
         ctx.session.waitingForDate = false;
         // Xử lý logic xem logwork cho ngày cụ thể
-        await ctx.reply(`Đang xem logwork cho ngày ${dateStr}`);
-        // TODO: Thêm logic xử lý logwork ở đây
+        const username = ctx.from?.username;
+        // Kiểm tra và lấy username hoặc tên đầy đủ
+        if (!username) {
+          await ctx.reply("Không thể xác định người dùng.");
+          return;
+        }
+
+        const userKey = username as keyof typeof User;
+
+        const userJira = User[userKey];
+
+        if (!userJira) {
+          await ctx.reply(
+            `Thông tin người dùng: ${username} chưa được khai báo`
+          );
+          return;
+        }
+
+        const data = await exportWorklogsToSheet({
+          assignee: userJira,
+          isToday: false,
+          dayCustom: dateStr,
+          filterDate: dateStr,
+        });
+
+        if (!data) {
+          await ctx.reply("Không có dữ liệu để báo cáo.");
+          return;
+        }
+
+        const result = formatMessage(data ?? [], userJira);
+        await ctx.reply(result, {
+          parse_mode: "MarkdownV2",
+        });
       } else {
         await ctx.reply(
           "Ngày không hợp lệ. Vui lòng nhập lại theo định dạng YYYY-MM-DD"
@@ -260,83 +455,6 @@ bot.on("message:text", async (ctx) => {
 // bot.on("message:text", async (ctx) => {
 //   const text = ctx.message.text;
 //   const user = ctx.message.from;
-
-//   // Kiểm tra và lấy username hoặc tên đầy đủ
-//   if (!user) {
-//     await ctx.reply("Không thể xác định người dùng.");
-//     return;
-//   }
-
-//   // console.log("messageCounts::", messageCounts);
-//   // if (!messageCounts[user.id]) {
-//   //   messageCounts[user.id] = { count: 1, lastMessage: now };
-//   // } else {
-//   //   const { count, lastMessage } = messageCounts[user.id];
-//   //   console.log("Now - lastMessage::", now - lastMessage);
-//   //   console.log("count::", count);
-//   //   // Kiểm tra nếu tin nhắn gửi quá nhanh (ví dụ: cách nhau dưới 5 giây)
-//   //   if (now - lastMessage < 2000) {
-//   //     messageCounts[user.id].count += 1;
-//   //   } else {
-//   //     // Reset lại nếu vượt quá 2 giây
-//   //     messageCounts[user.id] = { count: 1, lastMessage: now };
-//   //     if (count > 2) {
-//   //       return ctx.reply(
-//   //         "Bạn đang gửi quá nhiều tin nhắn. Vui lòng thử lại sau."
-//   //       );
-//   //     }
-//   //   }
-//   // }
-
-//   const username = user.username ?? "demo";
-//   const userKey = username as keyof typeof User;
-
-//   if (!User[userKey]) {
-//     await ctx.reply(`Không tìm thấy thông tin cho người dùng: ${username}`);
-//     return;
-//   }
-
-//   // Kiểm tra và lưu vào Redis trước
-//   const existsInRedis = await checkAndSaveToRedis(user.id, username);
-
-//   // Nếu chưa tồn tại trong Redis, lưu vào Turso
-//   if (!existsInRedis) {
-//     await saveToTurso(user.id, username);
-//   }
-
-//   const timestamp = ctx.message.date; // Unix timestamp (giây)
-
-//   // Chuyển Unix timestamp sang đối tượng Date
-//   const messageDate = new Date(timestamp * 1000); // Nhân với 1000 để chuyển sang ms
-
-//   const userJira = text.split(" ")[1] || User[userKey];
-
-//   if (text === "/test") {
-//     await ctx.reply("Đây là tin nhắn từ bot demo!");
-//     return;
-//   }
-
-//   // Định dạng ngày theo kiểu YYYY-MM-DD
-//   const formattedDate =
-//     validateDateFormat(text) || messageDate.toISOString().split("T")[0]; // Lấy phần ngày trước 'T'
-//   const data = await exportWorklogsToSheet(userJira, 0, formattedDate);
-//   if (!data) {
-//     await ctx.reply("Không có dữ liệu để báo cáo.");
-//     return;
-//   }
-//   const result = generateTelegramMessage(data ?? [], formattedDate);
-//   if (text === "Chào bạn 👋") {
-//     await ctx.reply(`Xin chào ${User[userKey]} ! 😊`);
-//     await ctx.reply(result);
-//   } else if (text === "Báo cáo 📄") {
-//     await ctx.reply(result);
-//   } else if (text === "Thoát ❌") {
-//     await ctx.reply("Hẹn gặp lại bạn!");
-//     await ctx.reply(result);
-//   } else {
-//     await ctx.reply("Bạn vừa gửi: " + text);
-//     await ctx.reply(result);
-//   }
 // });
 
 export const POST = webhookCallback(bot, "std/http");

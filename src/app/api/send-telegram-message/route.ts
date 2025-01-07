@@ -1,8 +1,5 @@
 import { User } from "@/consts";
-import {
-  exportWorklogsToSheet,
-  formatMessage
-} from "@/services";
+import { exportWorklogsToSheet, formatMessage } from "@/services";
 import { getAllUsersFromTurso } from "@/services/db";
 import { Bot } from "grammy";
 import moment from "moment";
@@ -24,14 +21,13 @@ export async function GET() {
     if (users?.length) {
       for (const user of users) {
         if (user.id) {
-          const data = await exportWorklogsToSheet(
-            User[user.username as keyof typeof User],
-            0,
-            moment().format("YYYY-MM-DD")
-          );
+          const data = await exportWorklogsToSheet({
+            assignee: User[user.username as keyof typeof User],
+            filterDate: moment().format("YYYY-MM-DD"),
+          });
           if (data) {
             const result = formatMessage(data ?? []);
-      
+
             await bot.api.sendMessage(Number(user.id), message);
             await bot.api.sendMessage(Number(user.id), result, {
               parse_mode: "MarkdownV2",

@@ -2,6 +2,7 @@
 
 import axios from "axios";
 import * as https from "https";
+import moment from "moment";
 
 const agent = new https.Agent({
   rejectUnauthorized: false,
@@ -26,21 +27,93 @@ const headers = {
   "upgrade-insecure-requests": "1",
 };
 
-export async function exportWorklogsToSheet(
-  assignee: string,
-  indexWeek: number,
-  filterDate: string
-) {
+export async function exportWorklogsToSheet({
+  assignee,
+  filterDate = "",
+  isToday = true,
+  isYesterday = false,
+  isCurrentWeek = false,
+  isCurrentMonth = false,
+  dayCustom = ''
+}: {
+  assignee: string;
+  filterDate?: string;
+  isToday?: boolean;
+  isYesterday?: boolean;
+  isCurrentWeek?: boolean;
+  isCurrentMonth?: boolean;
+  dayCustom?: string;
+}) {
   const jiraUrl = process.env.END_POINT;
 
-  const startDate = getStartOfWeek(indexWeek);
-  const endDate = getEndOfWeek(indexWeek);
+  // const startDate = getStartOfWeek(indexWeek);
+  // const endDate = getEndOfWeek(indexWeek);
+  // const dateRange = generateDateRange(startDate, endDate);
+
+  // Hôm nay
+  const today = {
+    startDate: moment().startOf("day").format("YYYY-MM-DD"),
+    endDate: moment().endOf("day").format("YYYY-MM-DD"),
+  };
+
+  // Hôm qua
+  const yesterday = {
+    startDate: moment().subtract(1, "days").startOf("day").format("YYYY-MM-DD"),
+    endDate: moment().subtract(1, "days").endOf("day").format("YYYY-MM-DD"),
+  };
+
+  // Tuần này
+  const thisWeek = {
+    startDate: moment().startOf("week").format("YYYY-MM-DD"),
+    endDate: moment().endOf("week").format("YYYY-MM-DD"),
+  };
+
+  // Tháng này
+  const thisMonth = {
+    startDate: moment().startOf("month").format("YYYY-MM-DD"),
+    endDate: moment().endOf("month").format("YYYY-MM-DD"),
+  };
+
+  // dayCustom
+  const thisDayCustom = {
+    startDate: moment(dayCustom).startOf("day").format("YYYY-MM-DD"),
+    endDate: moment(dayCustom).endOf("day").format("YYYY-MM-DD"),
+  };
+
+  // const startDate = isToday
+  //   ? today.startDate
+  //   : isYesterday
+  //   ? yesterday.startDate
+  //   : isCurrentWeek
+  //   ? thisWeek.startDate
+  //   : isCurrentMonth
+  //   ? thisMonth.startDate
+  //   : thisWeek.startDate;
+
+  const startDate = isToday
+    ? today.startDate
+    : isYesterday
+    ? yesterday.startDate
+    : isCurrentWeek
+    ? thisWeek.startDate
+    : isCurrentMonth
+    ? thisMonth.startDate
+    : thisDayCustom.startDate;
+
+  const endDate = isToday
+    ? today.endDate
+    : isYesterday
+    ? yesterday.endDate
+    : isCurrentWeek
+    ? thisWeek.endDate
+    : isCurrentMonth
+    ? thisMonth.endDate
+    : thisDayCustom.endDate;
+
   const dateRange = generateDateRange(startDate, endDate);
 
   const params = {
-    jql: `worklogAuthor = ${assignee} AND worklogDate >= ${formatDate(
-      startDate
-    )} AND worklogDate <= ${formatDate(endDate)}`,
+    jql: `worklogAuthor = ${assignee} AND worklogDate >= ${startDate} AND worklogDate <= ${endDate}`,
     fields: "key,summary,timeoriginalestimate,timespent",
   };
 
@@ -163,14 +236,40 @@ function getEndOfWeek(indexWeek: number) {
   return new Date(start.getTime() + 6 * 24 * 60 * 60 * 1000);
 }
 
-function generateDateRange(startDate: Date, endDate: Date) {
-  const dates = [];
-  let currentDate = new Date(startDate);
-  while (currentDate <= endDate) {
-    dates.push(formatDate(currentDate));
-    currentDate.setDate(currentDate.getDate() + 1);
+// function generateDateRange(startDate: Date, endDate: Date) {
+//   const dates = [];
+//   let currentDate = new Date(startDate);
+//   while (currentDate <= endDate) {
+//     dates.push(formatDate(currentDate));
+//     currentDate.setDate(currentDate.getDate() + 1);
+//   }
+//   return dates;
+// }
+
+/**
+ * Hàm tạo danh sách các ngày giữa startDate và endDate
+ * @param {string} startDate - Ngày bắt đầu (định dạng YYYY-MM-DD)
+ * @param {string} endDate - Ngày kết thúc (định dạng YYYY-MM-DD)
+ * @returns {string[]} - Mảng chứa các ngày (định dạng YYYY-MM-DD)
+ */
+function generateDateRange(startDate: string, endDate: string) {
+  const start = moment(startDate, "YYYY-MM-DD");
+  const end = moment(endDate, "YYYY-MM-DD");
+
+  // Kiểm tra nếu startDate lớn hơn endDate
+  if (start.isAfter(end)) {
+    throw new Error("startDate must be before or equal to endDate");
   }
-  return dates;
+
+  const dateRange = [];
+  let currentDate = start.clone();
+
+  while (currentDate.isSameOrBefore(end)) {
+    dateRange.push(currentDate.format("YYYY-MM-DD"));
+    currentDate.add(1, "days");
+  }
+
+  return dateRange;
 }
 
 function formatDate(date: Date) {
@@ -234,12 +333,41 @@ export function validateDateFormat(message: string): string {
 
 function filterDataByDate(data: any[], date: string) {
   return data
-    .filter((item) => item[date]) // Lọc các mục có giá trị không rỗng tại ngày cụ thể
-    .map((item) => ({
-      IssueKey: item.IssueKey,
-      Summary: item.Summary,
-      [date]: item[date],
-    }));
+    .filter((item) => {
+      if (date) {
+        // Nếu có date, lọc các mục có giá trị tại ngày đó
+        return !!item[date];
+      } else {
+        // Nếu không có date, lọc các mục có bất kỳ ngày nào có giá trị
+        return Object.keys(item).some((key) => 
+          key.match(/^\d{4}-\d{2}-\d{2}$/) && !!item[key]
+        );
+      }
+    })
+    .map((item) => {
+      if (date) {
+        // Nếu có date, chỉ trả về giá trị tại ngày đó
+        return {
+          IssueKey: item.IssueKey,
+          Summary: item.Summary,
+          [date]: item[date],
+        };
+      } else {
+        // Nếu không có date, trả về tất cả các ngày có giá trị
+        const filteredDates = Object.keys(item)
+          .filter((key) => key.match(/^\d{4}-\d{2}-\d{2}$/) && !!item[key])
+          .reduce((acc: any, key) => {
+            acc[key] = item[key];
+            return acc;
+          }, {});
+        
+        return {
+          IssueKey: item.IssueKey,
+          Summary: item.Summary,
+          ...filteredDates,
+        };
+      }
+    });
 }
 
 const escapeMarkdownV2 = (text: string) => {
@@ -247,7 +375,7 @@ const escapeMarkdownV2 = (text: string) => {
   return text.replace(/[_*[\]()~`>#+\-=|{}.!]/g, "\\$&");
 };
 
-export const formatMessage = (data: any[]) => {
+export const formatMessage = (data: any[], userJira?: string) => {
   if (!data || data.length === 0) {
     return `Không có dữ liệu để hiển thị`;
   }
@@ -260,7 +388,7 @@ export const formatMessage = (data: any[]) => {
     )
   );
 
-  let message = `📊 *Báo Cáo Công Việc*\n\n`;
+  let message = `📊 *Báo Cáo Công Việc ${userJira ?? ''}*\n\n`;
 
   allDates.sort().forEach((date) => {
     const tasksForDate = data.filter((item) => item[date]);
@@ -285,11 +413,13 @@ export const formatMessage = (data: any[]) => {
         } else {
           message += `🔹 ${issueKey} \\- ${summary}\n`;
         }
-        message += `   ⏱ ${hours.toFixed(1).replace('.', '\\.')} giờ\n\n`;
+        message += `   ⏱ ${hours.toFixed(1).replace(".", "\\.")} giờ\n\n`;
       }
     });
 
-    message += `📌 *Tổng trong ngày: ${dailyTotal.toFixed(1).replace('.', '\\.')} giờ*\n\n`;
+    message += `📌 *Tổng trong ngày: ${dailyTotal
+      .toFixed(1)
+      .replace(".", "\\.")} giờ*\n\n`;
   });
 
   const grandTotal = allDates.reduce((total, date) => {
@@ -302,7 +432,9 @@ export const formatMessage = (data: any[]) => {
     );
   }, 0);
 
-  message += `💪 *Tổng thời gian: ${grandTotal.toFixed(1).replace('.', '\\.')} giờ*`;
+  message += `💪 *Tổng thời gian: ${grandTotal
+    .toFixed(1)
+    .replace(".", "\\.")} giờ*`;
   return message;
 };
 
