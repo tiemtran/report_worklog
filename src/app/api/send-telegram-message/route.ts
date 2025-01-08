@@ -1,5 +1,13 @@
 import { getAllUsersFromTurso } from "@/services/db";
+import { Bot } from "grammy";
 import { NextResponse } from "next/server";
+
+const token = process.env.TELEGRAM_BOT_TOKEN;
+
+if (!token)
+  throw new Error("TELEGRAM_BOT_TOKEN environment variable not found.");
+
+const bot = new Bot(token);
 
 export async function POST(request: Request) {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:8042"; // URL gốc của ứng dụng
@@ -39,6 +47,11 @@ export async function POST(request: Request) {
 
     const success = results.filter((res) => res.ok).length;
     const failed = results.length - success;
+
+    await bot.api.sendMessage(
+      Number(849897475),
+      `Messages sent. Success: ${success}, Failed: ${failed}`
+    );
 
     return NextResponse.json({
       success: true,
