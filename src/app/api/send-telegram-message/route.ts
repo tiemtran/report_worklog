@@ -1,48 +1,51 @@
-import { User } from "@/consts";
-import { exportWorklogsToSheet, formatMessage } from "@/services";
 import { getAllUsersFromTurso } from "@/services/db";
-import { Bot } from "grammy";
-import moment from "moment";
 import { NextResponse } from "next/server";
 
-const token = process.env.TELEGRAM_BOT_TOKEN;
-
-if (!token)
-  throw new Error("TELEGRAM_BOT_TOKEN environment variable not found.");
-
-const bot = new Bot(token);
-
-export async function GET() {
-  const users = await getAllUsersFromTurso();
-
+export async function POST(request: Request) {
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:8042"; // URL gốc của ứng dụng
   try {
-    const message = "**Đây là tin nhắn tự động được gửi lúc 18h30**";
-
-    if (users?.length) {
-      for (const user of users) {
-        if (user.id) {
-          const data = await exportWorklogsToSheet({
-            assignee: User[user.username as keyof typeof User],
-            filterDate: moment().format("YYYY-MM-DD"),
-          });
-          if (data) {
-            const result = formatMessage(data ?? []);
-
-            await bot.api.sendMessage(Number(user.id), message);
-            await bot.api.sendMessage(Number(user.id), result, {
-              parse_mode: "MarkdownV2",
-            });
-          }
-        }
-      }
+    // Kiểm tra nếu request có body
+    const contentLength = request.headers.get("content-length");
+    if (!contentLength || Number(contentLength) === 0) {
+      return NextResponse.json(
+        { success: false, message: "Missing body" },
+        { status: 400 }
+      );
     }
+    const body = await request.json();
+    const textNotification = body?.textNotification ?? "";
+    const users = await getAllUsersFromTurso();
+
+    // const users = [
+    //   {
+    //     id: 849897475,
+    //     username: "longledang",
+    //   },
+    // ];
+
+    // Tách từng user thành các request API riêng
+    const requests = users?.map((user) =>
+      fetch(`${baseUrl}/api/send-message`, {
+        method: "POST",
+        body: JSON.stringify({
+          textNotification: textNotification,
+          user: user,
+        }),
+      })
+    );
+
+    // Gọi các API nhỏ song song
+    const results = await Promise.all(requests);
+
+    const success = results.filter((res) => res.ok).length;
+    const failed = results.length - success;
 
     return NextResponse.json({
       success: true,
-      message: "Messages sent successfully!",
+      message: `Messages sent. Success: ${success}, Failed: ${failed}`,
     });
   } catch (error) {
     console.error("Error sending messages:", error);
-    return NextResponse.json({ success: false, error: error });
+    return NextResponse.json({ success: false, error });
   }
 }
