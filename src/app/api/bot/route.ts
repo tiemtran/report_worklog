@@ -120,6 +120,11 @@ bot.command("dailyreport", async (ctx) => {
     return;
   }
 
+  if (data.length === 1 && data?.[0]?.status === 401) {
+    await ctx.reply("Cookie đã hết hạn, vui lòng thử lại sau.");
+    return;
+  }
+
   const result = formatMessage(data ?? [], userJira);
   await ctx.reply(result, {
     parse_mode: "MarkdownV2",
@@ -165,6 +170,11 @@ bot.command("test", async (ctx) => {
 
   if (!data) {
     await ctx.reply("Không có dữ liệu để báo cáo.");
+    return;
+  }
+
+  if (data.length === 1 && data?.[0]?.status === 401) {
+    await ctx.reply("Cookie đã hết hạn, vui lòng thử lại sau.");
     return;
   }
 
@@ -264,6 +274,11 @@ bot.callbackQuery("today_report", async (ctx) => {
     return;
   }
 
+  if (data.length === 1 && data?.[0]?.status === 401) {
+    await ctx.reply("Cookie đã hết hạn, vui lòng thử lại sau.");
+    return;
+  }
+
   const result = formatMessage(data ?? [], userJira);
   await ctx.reply(result, {
     parse_mode: "MarkdownV2",
@@ -299,6 +314,11 @@ bot.callbackQuery("yesterday_report", async (ctx) => {
 
   if (!data) {
     await ctx.reply("Không có dữ liệu để báo cáo.");
+    return;
+  }
+
+  if (data.length === 1 && data?.[0]?.status === 401) {
+    await ctx.reply("Cookie đã hết hạn, vui lòng thử lại sau.");
     return;
   }
 
@@ -339,6 +359,11 @@ bot.callbackQuery("current_week_report", async (ctx) => {
     return;
   }
 
+  if (data.length === 1 && data?.[0]?.status === 401) {
+    await ctx.reply("Cookie đã hết hạn, vui lòng thử lại sau.");
+    return;
+  }
+
   const result = formatMessage(data ?? [], userJira);
   await ctx.reply(result, {
     parse_mode: "MarkdownV2",
@@ -373,6 +398,11 @@ bot.callbackQuery("current_month_report", async (ctx) => {
 
   if (!data) {
     await ctx.reply("Không có dữ liệu để báo cáo.");
+    return;
+  }
+
+  if (data.length === 1 && data?.[0]?.status === 401) {
+    await ctx.reply("Cookie đã hết hạn, vui lòng thử lại sau.");
     return;
   }
 
@@ -431,6 +461,11 @@ bot.on("message:text", async (ctx) => {
 
         if (!data) {
           await ctx.reply("Không có dữ liệu để báo cáo.");
+          return;
+        }
+
+        if (data.length === 1 && data?.[0]?.status === 401) {
+          await ctx.reply("Cookie đã hết hạn, vui lòng thử lại sau.");
           return;
         }
 

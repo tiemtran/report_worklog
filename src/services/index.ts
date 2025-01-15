@@ -34,7 +34,7 @@ export async function exportWorklogsToSheet({
   isYesterday = false,
   isCurrentWeek = false,
   isCurrentMonth = false,
-  dayCustom = ''
+  dayCustom = "",
 }: {
   assignee: string;
   filterDate?: string;
@@ -122,6 +122,9 @@ export async function exportWorklogsToSheet({
       url: jiraUrl + "/rest/api/2/search",
       params,
     })) as any;
+    if (issues?.length && issues?.[0]?.status === 401) {
+      return issues;
+    }
     const allWorklogs = await processWorklogs(
       issues.issues,
       assignee,
@@ -150,6 +153,12 @@ async function callJiraApi(search: {
     })
     .catch((error) => {
       console.error("error:::::", error);
+      data = [
+        {
+          status: error.response.status,
+          message: error.response.code,
+        },
+      ];
     });
   return data;
 }
@@ -339,8 +348,8 @@ function filterDataByDate(data: any[], date: string) {
         return !!item[date];
       } else {
         // Nếu không có date, lọc các mục có bất kỳ ngày nào có giá trị
-        return Object.keys(item).some((key) => 
-          key.match(/^\d{4}-\d{2}-\d{2}$/) && !!item[key]
+        return Object.keys(item).some(
+          (key) => key.match(/^\d{4}-\d{2}-\d{2}$/) && !!item[key]
         );
       }
     })
@@ -360,7 +369,7 @@ function filterDataByDate(data: any[], date: string) {
             acc[key] = item[key];
             return acc;
           }, {});
-        
+
         return {
           IssueKey: item.IssueKey,
           Summary: item.Summary,
@@ -388,7 +397,7 @@ export const formatMessage = (data: any[], userJira?: string) => {
     )
   );
 
-  let message = `📊 *Báo Cáo Công Việc ${userJira ?? ''}*\n\n`;
+  let message = `📊 *Báo Cáo Công Việc ${userJira ?? ""}*\n\n`;
 
   allDates.sort().forEach((date) => {
     const tasksForDate = data.filter((item) => item[date]);
