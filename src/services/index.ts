@@ -9,7 +9,8 @@ const agent = new https.Agent({
 });
 
 const headers = {
-  Cookie: process.env.COOKIE,
+  // Cookie: process.env.COOKIE,
+  'Authorization': `Basic ${process.env.AUTHORIZATION}`, //Đang dùng user:pass encode base64, có thể bị decode lại lộ thông tin
   "Content-Type": "application/json",
   accept:
     "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
