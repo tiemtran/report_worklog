@@ -5,7 +5,6 @@ export const fetchCache = "force-no-store";
 import { User } from "@/consts";
 import { exportWorklogsToSheet, formatMessage } from "@/services";
 import { saveToTurso } from "@/services/db";
-import { checkAndSaveToRedis } from "@/services/redis";
 import { apiThrottler } from "@grammyjs/transformer-throttler";
 import {
   Bot,
@@ -81,16 +80,19 @@ bot.command("start", async (ctx) => {
     return;
   }
 
-  // Kiểm tra và lưu vào Redis trước
-  const existsInRedis = await checkAndSaveToRedis(user.id, user.username);
+  await saveToTurso(user.id, user.username);
+  await ctx.reply("Đăng ký thông tin thành công!");
 
-  // Nếu chưa tồn tại trong Redis, lưu vào Turso
-  if (!existsInRedis) {
-    await saveToTurso(user.id, user.username);
-    await ctx.reply("Đăng ký thông tin thành công!");
-  } else {
-    await ctx.reply("Người dùng đã tồn tại trong hệ thống!");
-  }
+  // Kiểm tra và lưu vào Redis trước
+  // const existsInRedis = await checkAndSaveToRedis(user.id, user.username);
+
+  // // Nếu chưa tồn tại trong Redis, lưu vào Turso
+  // if (!existsInRedis) {
+  //   await saveToTurso(user.id, user.username);
+  //   await ctx.reply("Đăng ký thông tin thành công!");
+  // } else {
+  //   await ctx.reply("Người dùng đã tồn tại trong hệ thống!");
+  // }
 });
 
 bot.command("dailyreport", async (ctx) => {
