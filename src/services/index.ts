@@ -94,22 +94,22 @@ export async function exportWorklogsToSheet({
   const startDate = isToday
     ? today.startDate
     : isYesterday
-    ? yesterday.startDate
-    : isCurrentWeek
-    ? thisWeek.startDate
-    : isCurrentMonth
-    ? thisMonth.startDate
-    : thisDayCustom.startDate;
+      ? yesterday.startDate
+      : isCurrentWeek
+        ? thisWeek.startDate
+        : isCurrentMonth
+          ? thisMonth.startDate
+          : thisDayCustom.startDate;
 
   const endDate = isToday
     ? today.endDate
     : isYesterday
-    ? yesterday.endDate
-    : isCurrentWeek
-    ? thisWeek.endDate
-    : isCurrentMonth
-    ? thisMonth.endDate
-    : thisDayCustom.endDate;
+      ? yesterday.endDate
+      : isCurrentWeek
+        ? thisWeek.endDate
+        : isCurrentMonth
+          ? thisMonth.endDate
+          : thisDayCustom.endDate;
 
   const dateRange = generateDateRange(startDate, endDate);
 
@@ -220,14 +220,20 @@ async function processWorklogs(
 
 const convertTimeSpentToHours = (timeSpent: any) => {
   let totalHours = 0;
+  const daysMatch = timeSpent.match(/(\d+)d/);
   const hoursMatch = timeSpent.match(/(\d+)h/);
   const minutesMatch = timeSpent.match(/(\d+)m/);
+  const definedHourInADay = 7; // 1 ngày = 7 giờ
+  if (daysMatch) {
+    totalHours += parseInt(daysMatch[1], 10) * definedHourInADay;
+  }
   if (hoursMatch) {
     totalHours += parseInt(hoursMatch[1], 10);
   }
   if (minutesMatch) {
     totalHours += parseInt(minutesMatch[1], 10) / 60;
   }
+
   return totalHours.toFixed(1);
 };
 function convertSecondToHours(timeSpent: any) {
