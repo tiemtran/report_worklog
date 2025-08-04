@@ -56,7 +56,6 @@ bot.api.setMyCommands([
   { command: "start", description: "Đăng kí thông tin" },
   { command: "dailyreport", description: "Xem Logwork ngày hiện tại" },
   { command: "report", description: "Xem Logwork option" },
-  { command: "help", description: "Xem hướng dẫn" },
   { command: "menu", description: "Các tiện ích khác" },
 ]);
 
@@ -185,39 +184,6 @@ bot.command("test", async (ctx) => {
     parse_mode: "MarkdownV2",
   });
 });
-
-bot.command("help", async (ctx) => {
-  // Trong MarkdownV2, các ký tự đặc biệt cần được escape:
-  // _ * [ ] ( ) ~ ` > # + - = | { } . !
-  const helpMessage = `
-*Hướng dẫn sử dụng bot*
-
-*1\\. Các lệnh cơ bản:*
-• /start \\- Đăng kí thông tin
-• /dailyreport \\- Xem Logwork ngày hôm nay
-• /report \\- Xem Logwork với các option
-• /menu \\- Xem menu chính
-• /book \\- Đặt lịch hẹn (Comming soon...)
-• /help \\- Xem hướng dẫn này
-
-*2\\. Cách sử dụng:*
-• Nhấn vào các nút để tương tác
-• Gửi tin nhắn để chat với bot
-• Sử dụng menu để điều hướng
-
-*3\\. Định dạng văn bản:*
-• _In nghiêng_ \\- Quan trọng
-• *In đậm* \\- Rất quan trọng
-• ||Văn bản ẩn|| \\- Bí mật
-• \`Code\` \\- Mã lệnh
-
-_Liên hệ nhà phát triển: @longledang_`;
-
-  await ctx.reply(helpMessage, {
-    parse_mode: "MarkdownV2",
-  });
-});
-
 // Xử lý khi người dùng nhấn nút trên reply keyboard
 bot.hears("❌ Đóng menu", async (ctx) => {
   await ctx.reply("Đã đóng menu", {
